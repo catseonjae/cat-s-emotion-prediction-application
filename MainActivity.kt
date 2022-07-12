@@ -23,6 +23,8 @@ import android.widget.Toast
 import androidx.camera.lifecycle.ProcessCameraProvider
 import android.util.Log
 import android.util.Size
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.*
 import androidx.camera.video.FallbackStrategy
 import androidx.camera.video.MediaStoreOutputOptions
@@ -110,7 +112,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var cameraExecutor: ExecutorService
 
     private var stream = ArrayList<ArrayList<ArrayList<Float>>>()
-
+    private lateinit var getResult: ActivityResultLauncher<Intent>
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -123,13 +125,19 @@ class MainActivity : AppCompatActivity() {
             startCamera()
         } else {
             ActivityCompat.requestPermissions(
-                this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS
+                    this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS
             )
         }
 
         viewBinding.videoCaptureButton.setOnClickListener { captureVideo() }
-
+        viewBinding.videoSelectButton.setOnClickListener{ selectVideo() }
         cameraExecutor = Executors.newSingleThreadExecutor()
+    }
+    private fun selectVideo() {
+        getResult = registerForActivityResult(ActivityResultContracts.StartActivityForResult()){
+        }
+
+
     }
     private fun captureVideo() {
         val videoCapture = this.videoCapture ?: return
@@ -146,7 +154,7 @@ class MainActivity : AppCompatActivity() {
 
         // create and start a new recording session
         val name = SimpleDateFormat(FILENAME_FORMAT, Locale.US)
-            .format(System.currentTimeMillis())
+                .format(System.currentTimeMillis())
         val contentValues = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, name)
             put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4")
@@ -156,51 +164,51 @@ class MainActivity : AppCompatActivity() {
         }
 
         val mediaStoreOutputOptions = MediaStoreOutputOptions
-            .Builder(contentResolver, MediaStore.Video.Media.EXTERNAL_CONTENT_URI)
-            .setContentValues(contentValues)
-            .build()
+                .Builder(contentResolver, MediaStore.Video.Media.EXTERNAL_CONTENT_URI)
+                .setContentValues(contentValues)
+                .build()
         recording = videoCapture.output
-            .prepareRecording(this, mediaStoreOutputOptions)
-            .apply {
-                if (PermissionChecker.checkSelfPermission(this@MainActivity,
-                        Manifest.permission.RECORD_AUDIO) ==
-                    PermissionChecker.PERMISSION_GRANTED)
-                {
-                    withAudioEnabled()
-                }
-            }
-            .start(ContextCompat.getMainExecutor(this)) { recordEvent ->
-                when(recordEvent) {
-                    is VideoRecordEvent.Start -> {
-                        viewBinding.videoCaptureButton.apply {
-                            text = getString(R.string.stop_capture)
-                            isEnabled = true
-                        }
-                    }
-                    is VideoRecordEvent.Finalize -> {
-                        if (!recordEvent.hasError()) {
-                            val msg = "동영상 촬영에 성공했습니다. 다음의 경로에 저장됩니다: " +
-                                    "${recordEvent.outputResults.outputUri}"
-                            Toast.makeText(baseContext, msg, Toast.LENGTH_LONG)
-                                .show()
-                            Log.d(TAG, msg)
-                        } else {
-                            recording?.close()
-                            recording = null
-                            Log.e(TAG, "동영상 촬영 중 에러가 발생했습니다. 에러 코드: " +
-                                    "${recordEvent.error}")
-                        }
-                        viewBinding.videoCaptureButton.apply {
-                            text = getString(R.string.start_capture)
-                            isEnabled = true
-                        }
-                        val intent = Intent(this, SubActivity::class.java)
-                        intent.putExtra("preprocessed_image_stream", stream)
-                        startActivity(intent)
-                        stream.clear()
+                .prepareRecording(this, mediaStoreOutputOptions)
+                .apply {
+                    if (PermissionChecker.checkSelfPermission(this@MainActivity,
+                                    Manifest.permission.RECORD_AUDIO) ==
+                            PermissionChecker.PERMISSION_GRANTED)
+                    {
+                        withAudioEnabled()
                     }
                 }
-            }
+                .start(ContextCompat.getMainExecutor(this)) { recordEvent ->
+                    when(recordEvent) {
+                        is VideoRecordEvent.Start -> {
+                            viewBinding.videoCaptureButton.apply {
+                                text = getString(R.string.stop_capture)
+                                isEnabled = true
+                            }
+                        }
+                        is VideoRecordEvent.Finalize -> {
+                            if (!recordEvent.hasError()) {
+                                val msg = "동영상 촬영에 성공했습니다. 다음의 경로에 저장됩니다: " +
+                                        "${recordEvent.outputResults.outputUri}"
+                                Toast.makeText(baseContext, msg, Toast.LENGTH_LONG)
+                                        .show()
+                                Log.d(TAG, msg)
+                            } else {
+                                recording?.close()
+                                recording = null
+                                Log.e(TAG, "동영상 촬영 중 에러가 발생했습니다. 에러 코드: " +
+                                        "${recordEvent.error}")
+                            }
+                            viewBinding.videoCaptureButton.apply {
+                                text = getString(R.string.start_capture)
+                                isEnabled = true
+                            }
+                            val intent = Intent(this, SubActivity::class.java)
+                            intent.putExtra("preprocessed_image_stream", stream)
+                            startActivity(intent)
+                            stream.clear()
+                        }
+                    }
+                }
     }
 
     private fun startCamera() {
@@ -212,25 +220,25 @@ class MainActivity : AppCompatActivity() {
 
             // Preview
             val preview = Preview.Builder()
-                .build()
-                .also {
-                    it.setSurfaceProvider(viewBinding.viewFinder.surfaceProvider)
-                }
+                    .build()
+                    .also {
+                        it.setSurfaceProvider(viewBinding.viewFinder.surfaceProvider)
+                    }
             val recorder = Recorder.Builder()
-                .setQualitySelector(QualitySelector.from(Quality.HIGHEST))
-                .build()
+                    .setQualitySelector(QualitySelector.from(Quality.HIGHEST))
+                    .build()
             videoCapture = VideoCapture.withOutput(recorder)
 
             imageCapture = ImageCapture.Builder()
-                .build()
+                    .build()
 
             val imageAnalyzer = ImageAnalysis.Builder()
-                .build()
-                .also {
-                    it.setAnalyzer(cameraExecutor, LuminosityAnalyzer { luma ->
-                        Log.d(TAG, "Average luminosity: $luma")
-                    })
-                }
+                    .build()
+                    .also {
+                        it.setAnalyzer(cameraExecutor, LuminosityAnalyzer { luma ->
+                            Log.d(TAG, "Average luminosity: $luma")
+                        })
+                    }
 
 
             // Select back camera as a default
@@ -242,7 +250,7 @@ class MainActivity : AppCompatActivity() {
 
                 // Bind use cases to camera
                 //cameraProvider.bindToLifecycle(
-                    //this, cameraSelector, preview, imageCapture, imageAnalyzer)
+                //this, cameraSelector, preview, imageCapture, imageAnalyzer)
                 cameraProvider.bindToLifecycle(this, cameraSelector, imageAnalyzer, videoCapture)
 
             } catch(exc: Exception) {
@@ -252,10 +260,9 @@ class MainActivity : AppCompatActivity() {
         }, ContextCompat.getMainExecutor(this))
     }
 
-
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(
-            baseContext, it
+                baseContext, it
         ) == PackageManager.PERMISSION_GRANTED
     }
 
@@ -264,16 +271,16 @@ class MainActivity : AppCompatActivity() {
         cameraExecutor.shutdown()
     }
     override fun onRequestPermissionsResult(
-        requestCode: Int, permissions: Array<String>, grantResults:
-        IntArray) {
+            requestCode: Int, permissions: Array<String>, grantResults:
+            IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_CODE_PERMISSIONS) {
             if (allPermissionsGranted()) {
                 startCamera()
             } else {
                 Toast.makeText(this,
-                    "Permissions not granted by the user.",
-                    Toast.LENGTH_SHORT).show()
+                        "Permissions not granted by the user.",
+                        Toast.LENGTH_SHORT).show()
                 finish()
             }
         }
@@ -293,12 +300,12 @@ class MainActivity : AppCompatActivity() {
     private val tfImageProcessor by lazy {
         val cropSize = minOf(bitmapBuffer.width, bitmapBuffer.height)
         ImageProcessor.Builder()
-            .add(ResizeWithCropOrPadOp(cropSize, cropSize))
-            .add(ResizeOp(
-                tfInputSize.height, tfInputSize.width, ResizeOp.ResizeMethod.NEAREST_NEIGHBOR))
-            .add(Rot90Op(-imageRotationDegrees / 90))
-            .add(NormalizeOp(0f, 1f))
-            .build()
+                .add(ResizeWithCropOrPadOp(cropSize, cropSize))
+                .add(ResizeOp(
+                        tfInputSize.height, tfInputSize.width, ResizeOp.ResizeMethod.NEAREST_NEIGHBOR))
+                .add(Rot90Op(-imageRotationDegrees / 90))
+                .add(NormalizeOp(0f, 1f))
+                .build()
     }
 
     private val nnApiDelegate by lazy  {
@@ -307,16 +314,17 @@ class MainActivity : AppCompatActivity() {
 
     private val tflite by lazy {
         Interpreter(
-            FileUtil.loadMappedFile(this, MODEL_PATH),
-            Interpreter.Options().addDelegate(nnApiDelegate))
+                FileUtil.loadMappedFile(this, MODEL_PATH),
+                Interpreter.Options().addDelegate(nnApiDelegate))
     }
+    /*
     private val detector by lazy {
         ObjectDetectionHelper(
-            tflite,
-            FileUtil.loadLabels(this, LABELS_PATH)
+                tflite,
+                FileUtil.loadLabels(this, LABELS_PATH)
         )
     }
-
+*/
     private val tfInputSize by lazy {
         val inputIndex = 0
         val inputShape = tflite.getInputTensor(inputIndex).shape()
@@ -328,14 +336,14 @@ class MainActivity : AppCompatActivity() {
         private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
         private const val REQUEST_CODE_PERMISSIONS = 10
         private val REQUIRED_PERMISSIONS =
-            mutableListOf(
-                Manifest.permission.CAMERA,
-                Manifest.permission.RECORD_AUDIO
-            ).apply {
-                if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
-                    add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                }
-            }.toTypedArray()
+                mutableListOf(
+                        Manifest.permission.CAMERA,
+                        Manifest.permission.RECORD_AUDIO
+                ).apply {
+                    if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+                        add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    }
+                }.toTypedArray()
 
         private const val ACCURACY_THRESHOLD = 0.5f
         private const val MODEL_PATH = "coco_ssd_mobilenet_v1_1.0_quant.tflite"
