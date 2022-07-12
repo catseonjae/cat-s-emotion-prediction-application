@@ -10,7 +10,9 @@
     <androidx.camera.view.PreviewView
         android:id="@+id/viewFinder"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent" >
+
+    </androidx.camera.view.PreviewView>
 
 
     <Button
@@ -31,4 +33,15 @@
         android:orientation="vertical"
         app:layout_constraintGuide_percent=".50" />
 
+    <Button
+        android:id="@+id/video_select_button"
+        android:layout_width="110dp"
+        android:layout_height="110dp"
+        android:layout_marginBottom="50dp"
+        android:layout_marginEnd="50dp"
+        android:elevation="2dp"
+        android:text="@string/select_video"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/vertical_centerline"
+        />
 </androidx.constraintlayout.widget.ConstraintLayout>
